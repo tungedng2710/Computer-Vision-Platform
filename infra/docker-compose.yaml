@@ -1,0 +1,118 @@
+version: "3.8"
+
+################################################################################
+# Network (so services can discover each other by name)
+################################################################################
+networks:
+  cv-net:
+    driver: bridge
+
+################################################################################
+# Volumes (data survives container restarts)
+################################################################################
+volumes:
+  pg-data:
+  minio-data:
+  mlflow-artifacts:     # optional – bind MLflow artifacts outside MinIO
+  labelstudio-data:
+
+################################################################################
+# Services
+################################################################################
+services:
+
+  # ---------------------------------------------------------------------------
+  # 1. PostgreSQL – metadata store for MLflow & Label Studio
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16
+    container_name: cv-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cvuser
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: cvmeta
+    ports: ["5432:5432"]        # host → container
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks: [cv-net]
+
+  # ---------------------------------------------------------------------------
+  # 2. MinIO – S3-compatible object storage for data, models, DVC cache
+  # ---------------------------------------------------------------------------
+  minio:
+    image: "minio/minio:${MINIO_VERSION:-RELEASE.2025-04-22T22-12-26Z}"
+    container_name: cv-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"    # S3 API
+      - "9001:9001"    # Web console
+    volumes:
+      - minio-data:/data
+    networks: [cv-net]
+
+  # ---------------------------------------------------------------------------
+  # 3. MLflow tracking server – backs onto Postgres & MinIO
+  # ---------------------------------------------------------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: cv-mlflow
+    depends_on: [postgres, minio]
+    environment:
+      MLFLOW_TRACKING_URI: postgresql://cvuser:supersecret@postgres:5432/cvmeta
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      mlflow server
+        --backend-store-uri ${MLFLOW_TRACKING_URI}
+        --default-artifact-root s3://cv-mlflow/
+        --host 0.0.0.0
+        --serve-artifacts
+    ports: ["5000:5000"]
+    networks: [cv-net]
+
+  # ---------------------------------------------------------------------------
+  # 4. Label Studio – annotation UI (uses the same Postgres + MinIO)
+  # ---------------------------------------------------------------------------
+  labelstudio:
+    image: heartexlabs/label-studio:latest
+    container_name: cv-labelstudio
+    depends_on: [postgres, minio]
+    environment:
+      POSTGRE_NAME: cvmeta
+      POSTGRE_USER: cvuser
+      POSTGRE_PASSWORD: supersecret
+      POSTGRE_PORT: 5432
+      POSTGRE_HOST: postgres
+      DJANGO_DB: default
+      LABEL_STUDIO_S3_ENDPOINT: http://minio:9000
+      LABEL_STUDIO_S3_ACCESS_KEY: minio
+      LABEL_STUDIO_S3_SECRET_KEY: minio123
+      LABEL_STUDIO_S3_BUCKET: cv-annotation
+      LABEL_STUDIO_S3_REGION: us-east-1
+    ports: ["8080:8080"]
+    volumes:
+      - labelstudio-data:/label-studio/data
+    networks: [cv-net]
+
+  # ---------------------------------------------------------------------------
+  # 5. Streamlit dashboard (optional) – reads MLflow & DB metrics
+  # ---------------------------------------------------------------------------
+  dashboard:
+    build:
+      context: ../dashboard          # adjust path to your Streamlit app
+      dockerfile: Dockerfile
+    container_name: cv-dashboard
+    depends_on: [mlflow, postgres, minio]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      DB_URI: postgresql+psycopg2://cvuser:supersecret@postgres:5432/cvmeta
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+    ports: ["8501:8501"]
+    networks: [cv-net]
