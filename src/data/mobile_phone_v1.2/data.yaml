@@ -1,0 +1,13 @@
+train: /root/tungn197/Computer-Vision-Platform/src/data/mobile_phone_v1.2/train/images
+val: /root/tungn197/Computer-Vision-Platform/src/data/mobile_phone_v1.2/valid/images
+test: /root/tungn197/Computer-Vision-Platform/src/data/mobile_phone_v1.2/test/images
+
+nc: 1
+names: ['Phone']
+
+roboflow:
+  workspace: brient
+  project: 4000handp4000phone
+  version: 8
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/brient/4000handp4000phone/dataset/8
