@@ -13,11 +13,12 @@ UPLOAD_RESULTS_TO_MINIO = os.getenv('UPLOAD_RESULTS_TO_MINIO', 'True').lower() =
 MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', '0.0.0.0:9000')
 MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
 MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
-MINIO_BUCKET = os.getenv('MINIO_BUCKET', 'iva')
+MINIO_BUCKET = os.getenv('MINIO_BUCKET', 'ivamodels')
 MINIO_PREFIX = os.getenv('MINIO_PREFIX', 'yolo_runs')
 
 # ---------------- Ultralytics + MLflow ----------------
 settings.update({"mlflow": True})
+mlflow.set_tracking_uri("http://0.0.0.0:7863")
 
 
 def upload_folder_to_minio(client: Minio, bucket: str,
