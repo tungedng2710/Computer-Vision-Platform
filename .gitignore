@@ -218,4 +218,5 @@ __marimo__/
 *.ckpt
 src/train/yolo/train.sh
 src/train/yolo/runs
+src/train/yolo/*runs
 src/datasets/*

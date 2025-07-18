@@ -3,7 +3,7 @@ docker run -d \
   -e POSTGRES_USER=mlflowuser \
   -e POSTGRES_PASSWORD=mlflowpass \
   -e POSTGRES_DB=mlflowdb \
-  -p 7862:5432 \
+  -p 5432:5432 -p 7862:5432 \
   postgres:latest
 
 docker run -d \
