@@ -19,9 +19,6 @@ MINIO_PREFIX = os.getenv('MINIO_PREFIX', 'yolo_runs')
 # ---------------- Ultralytics + MLflow ----------------
 settings.update({"mlflow": True})
 
-# ---------------- ensure datasets dir exists ----------------
-os.makedirs("./datasets", exist_ok=True)
-
 
 def upload_folder_to_minio(client: Minio, bucket: str,
                            local_dir: Path, prefix: str = "") -> None:

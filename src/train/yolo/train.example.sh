@@ -7,7 +7,7 @@ export MINIO_PREFIX='yolo_runs'
 
 python train.py \
   --model-path ./weights/yolo11l.pt \
-  --data-path ./datasets/mobile_phone_v1.2/data.yaml \
+  --data-path ../../datasets/mobile_phone_v1.2/data.yaml \
   --epochs 10 \
   --batch 32 \
   --device 0 \
